@@ -1,4 +1,3 @@
-
 # SOP RAG Update System - Project Plan
 ## Overview
 This project aims to create a locally-run system that uses RAG (Retrieval-Augmented Generation) to help update Standard Operating Procedures (SOPs) by analyzing company documents. The system will provide a conversational interface to discuss document updates, with the AI offering suggestions that can be accepted or rejected.
@@ -80,7 +79,7 @@ Accept/reject workflow for changes
 System settings and configuration
 
 ## Implementation Phases
-### Phase 1: Document Processing &amp; Storage
+### Phase 1: Document Processing & Storage
 
 Set up project environment and dependencies
 Create document processors for Word, PDF, PowerPoint
@@ -88,7 +87,7 @@ Implement embedding pipeline using Sentence-Transformers
 Build local vector store with Chroma DB
 Create metadata database with SQLite
 
-### Phase 2: RAG &amp; Conversation System
+### Phase 2: RAG & Conversation System
 
 Implement retrieval system with local vector DB
 Set up Gemini API integration
@@ -119,7 +118,7 @@ python-docx: Process Word documents
 python-pptx: Process PowerPoint documents
 unstructured-io: Enhanced document parsing
 
-### Embedding &amp; Vector Search
+### Embedding & Vector Search
 
 Sentence-Transformers: all-MiniLM-L6-v2 (80MB model size)
 FAISS: Facebook AI Similarity Search for vector storage
@@ -213,7 +212,7 @@ sop-assistant/
 ├── README.md          # Project documentation
 └── requirements.txt   # Project dependencies
 
-## System Requirements &amp; Limitations
+## System Requirements & Limitations
 
 RTX 3060 with 6GB VRAM is sufficient for running the embedding models
 32GB RAM allows for processing moderate document collections

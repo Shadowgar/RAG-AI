@@ -1,4 +1,3 @@
-
 # SOP RAG Update System - Task List
 ## Setup Phase
 ### Environment Setup
@@ -18,7 +17,7 @@
 [ ] Initialize README.md with project overview
 [ ] Create configuration file for system settings
 
-## Phase 1: Document Processing &amp; Storage
+## Phase 1: Document Processing & Storage
 ### Document Processors
 
 [ ] Create base document processor class
@@ -60,7 +59,7 @@
 [ ] Implement query functions for metadata
 [ ] Add unit tests for metadata storage
 
-## Phase 2: RAG &amp; Conversation System
+## Phase 2: RAG & Conversation System
 ### Retrieval System
 
 [ ] Implement hybrid search (BM25 + vector)
@@ -234,7 +233,7 @@
 [ ] Implement fallback mechanisms for API failures
 [ ] Create usage monitoring dashboard
 
-## Documentation &amp; Finalization
+## Documentation & Finalization
 ### Documentation
 
 [ ] Create comprehensive README
@@ -255,7 +254,7 @@
 [ ] Add FAQ section
 [ ] Create video tutorials (optional)
 
-### Final Testing &amp; Review
+### Final Testing & Review
 
 [ ] Perform comprehensive system testing
 [ ] Conduct security review
