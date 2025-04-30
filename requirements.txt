@@ -1,0 +1,12 @@
+sentence-transformers
+faiss-cpu
+pymupdf
+python-docx
+python-pptx
+streamlit
+chromadb
+llama-index
+google-generativeai
+pydantic
+unstructured[docx,pptx,pdf]
+rank_bm25

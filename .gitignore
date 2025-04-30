@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+.Python
+
+# Virtual Environment
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment variables
+.env
+
+# Data
+data/vector_db/
+data/metadata/
+
+# Other
+*.log

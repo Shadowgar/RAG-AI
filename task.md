@@ -2,72 +2,72 @@
 ## Setup Phase
 ### Environment Setup
 
-[ ] Create project directory structure
-[ ] Initialize Git repository
-[ ] Set up Python virtual environment
-[ ] Create requirements.txt with all dependencies
-[ ] Install VSCode extensions (Roocode, Python, Jupyter, GitLens, Error Lens)
-[ ] Configure .gitignore file
-[ ] Create .env file for API keys
+[x] Create project directory structure
+[x] Initialize Git repository
+[x] Set up Python virtual environment
+[x] Create requirements.txt with all dependencies
+[x] Install VSCode extensions (Roocode, Python, Jupyter, GitLens, Error Lens)
+[x] Configure .gitignore file
+[x] Create .env file for API keys
 
 ### Project Configuration
 
-[ ] Configure VSCode settings for Python
-[ ] Set up Python linting and formatting
-[ ] Initialize README.md with project overview
-[ ] Create configuration file for system settings
+[x] Configure VSCode settings for Python
+[x] Set up Python linting and formatting
+[x] Initialize README.md with project overview
+[x] Create configuration file for system settings
 
 ## Phase 1: Document Processing & Storage
 ### Document Processors
 
-[ ] Create base document processor class
-[ ] Implement Word document processor (python-docx)
-[ ] Implement PDF document processor (pypdf)
-[ ] Implement PowerPoint processor (python-pptx)
-[ ] Add metadata extraction for all document types
-[ ] Create document chunking strategy
-[ ] Implement structure preservation mechanisms
-[ ] Add unit tests for document processors
+[x] Create base document processor class
+[ ] Implement Word document processor (python-docx) - *Note: Core parsing handled by unstructured*
+[ ] Implement PDF document processor (pypdf) - *Note: Core parsing handled by unstructured*
+[ ] Implement PowerPoint processor (python-pptx) - *Note: Core parsing handled by unstructured*
+[x] Add metadata extraction for all document types - *Implemented using unstructured*
+[x] Create document chunking strategy
+[ ] Implement structure preservation mechanisms - *Partially handled by unstructured, may need refinement*
+[x] Add unit tests for document processors
 
 ### Embedding System
 
-[ ] Research and select optimal embedding model for RTX 3060
-[ ] Set up Sentence-Transformers with all-MiniLM-L6-v2
-[ ] Create embedding generation pipeline
-[ ] Implement batched processing for large documents
-[ ] Add caching for embeddings
-[ ] Optimize embedding process for GPU usage
-[ ] Create utility to monitor GPU memory usage
-[ ] Add unit tests for embedding system
+[ ] Research and select optimal embedding model for RTX 3060 - *Selected all-MiniLM-L6-v2 based on plan*
+[x] Set up Sentence-Transformers with all-MiniLM-L6-v2
+[x] Create embedding generation pipeline
+[x] Implement batched processing for large documents
+[x] Add caching for embeddings - *Implemented via in-memory dict in EmbeddingModel*
+[x] Optimize embedding process for GPU usage - *Basic CUDA support added, FP16 precision enabled for CUDA*
+[x] Create utility to monitor GPU memory usage - *Implemented in src/utils/gpu_monitor.py*
+[x] Add unit tests for embedding system
 
 ### Vector Database
 
-[ ] Set up local Chroma DB instance
-[ ] Create schema for document storage
-[ ] Implement document indexing functionality
-[ ] Create retrieval functions for vectors
-[ ] Optimize vector search for performance
-[ ] Implement persistence layer for vector database
-[ ] Add unit tests for vector database
+[ ] Set up local Chroma DB instance - *Using FAISS as per implementation*
+[x] Create schema for document storage - *Handled in Metadata Storage*
+[x] Implement document indexing functionality - *Integrated parsing, chunking, embedding, and storage*
+[x] Create retrieval functions for vectors - *Implemented in Retriever.retrieve method*
+[x] Optimize vector search for performance - *Implemented IndexIVFFlat for faster search*
+[x] Implement persistence layer for vector database - *Implemented save/load for FAISS index*
+[x] Add unit tests for vector database
 
 ### Metadata Storage
 
-[ ] Create SQLite database schema
-[ ] Implement metadata storage functions
-[ ] Create relationships between documents and chunks
-[ ] Add versioning system for documents
-[ ] Implement query functions for metadata
-[ ] Add unit tests for metadata storage
+[x] Create SQLite database schema
+[x] Implement metadata storage functions
+[x] Create relationships between documents and chunks - *Explicit linking (previous/next chunk IDs) implemented in MetadataStore*
+[x] Add versioning system for documents
+[x] Implement query functions for metadata
+[x] Add unit tests for metadata storage
 
 ## Phase 2: RAG & Conversation System
 ### Retrieval System
 
-[ ] Implement hybrid search (BM25 + vector)
-[ ] Create relevance scoring mechanism
-[ ] Add filtering by document metadata
-[ ] Implement context window management
-[ ] Create retrieval caching system
-[ ] Add unit tests for retrieval system
+[x] Implement hybrid search (BM25 + vector) - *Implemented in Retriever.retrieve using RRF*
+[x] Create relevance scoring mechanism - *Implemented improved RRF scoring in Retriever.retrieve*
+[x] Add filtering by document metadata - *Implemented metadata filtering in Retriever.retrieve*
+[x] Implement context window management - *Implemented context window management in Retriever.retrieve*
+[x] Create retrieval caching system - *Implemented retrieval caching in Retriever.retrieve*
+[x] Add unit tests for retrieval system - *Created unit tests in tests/test_rag.py*
 
 ### Gemini Integration
 
