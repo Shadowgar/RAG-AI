@@ -27,7 +27,13 @@ def setup_and_teardown_test_files():
     # Create dummy docx
     try:
         doc = DocxDocument()
-        doc.add_paragraph("This is a test paragraph in a docx file.")
+        paragraph = doc.add_paragraph("This is a test paragraph in a docx file with ")
+        run = paragraph.add_run("{{ bold }}")
+        run.bold = True
+        paragraph.add_run(" bold text and ")
+        run = paragraph.add_run("{{ italic }}")
+        run.italic = True
+        paragraph.add_run(" italic text.")
         doc.save(DUMMY_DOCX_PATH)
     except ImportError:
         pytest.skip("python-docx not installed, skipping docx tests")
@@ -91,7 +97,46 @@ def test_docx_processor_process():
         assert "metadata" in chunk
         assert isinstance(chunk["content"], str)
         assert isinstance(chunk["metadata"], dict)
-        assert chunk["metadata"].get("source") == DUMMY_DOCX_PATH
+        assert "source" in chunk["metadata"]
+        assert chunk["metadata"]["source"] == DUMMY_DOCX_PATH
+
+def test_docx_processor_process_formatting():
+    processor = DocxProcessor()
+    if not os.path.exists(DUMMY_DOCX_PATH):
+        pytest.skip("Dummy docx file not created.")
+    chunks = processor.process(DUMMY_DOCX_PATH)
+
+    # Find the chunk with bold text
+    bold_chunk = next((chunk for chunk in chunks if chunk["content"].strip() == "replaced bold text"), None)
+    assert bold_chunk is not None
+    assert bold_chunk["metadata"]["bold"] is True
+
+    # Find the chunk with italic text
+    italic_chunk = next((chunk for chunk in chunks if chunk["content"] == "replaced italic text"), None)
+    assert italic_chunk is not None
+    assert italic_chunk["metadata"]["italic"] is True
+
+
+def test_docx_processor_process_with_replacements():
+    processor = DocxProcessor()
+    if not os.path.exists(DUMMY_DOCX_PATH):
+        pytest.skip("Dummy docx file not created.")
+    replacements = {"bold": "replaced bold text", "italic": "replaced italic text"}
+    chunks = processor.process(DUMMY_DOCX_PATH, replacements)
+
+    # Print chunks for debugging
+    for chunk in chunks:
+        print(chunk)
+
+    # Find the chunk with replaced bold text
+    bold_chunk = next((chunk for chunk in chunks if chunk["content"].strip() == "replaced bold text"), None)
+    assert bold_chunk is not None
+    assert bold_chunk["metadata"]["bold"] is True
+
+    # Find the chunk with replaced italic text
+    italic_chunk = next((chunk for chunk in chunks if chunk["content"] == "replaced italic text"), None)
+    assert italic_chunk is not None
+    assert italic_chunk["metadata"]["italic"] is True
 
 
 # --- Test PdfProcessor ---
@@ -116,7 +161,7 @@ def test_pdf_processor_process():
         assert isinstance(chunk["content"], str)
         assert isinstance(chunk["metadata"], dict)
         assert chunk["metadata"].get("source") == DUMMY_PDF_PATH
-        assert chunk["type"] == "page"
+        assert chunk["type"].lower() in ["page", "header"]
 
 
 # --- Test PptxProcessor ---

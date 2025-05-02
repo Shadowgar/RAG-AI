@@ -10,3 +10,4 @@ google-generativeai
 pydantic
 unstructured[docx,pptx,pdf]
 rank_bm25
+docxtpl

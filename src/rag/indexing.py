@@ -1,24 +1,28 @@
 import os
 import time
-from datetime import datetime # Import datetime for file metadata
+from datetime import datetime  # Import datetime for file metadata
 from typing import List, Dict, Any
 from ..processors.document_parser import parse_document
 from ..processors.chunking import chunk_document_elements
 from .embeddings import EmbeddingModel
 from .vector_store import VectorStore
-from ..data.metadata_store import MetadataStore # Import MetadataStore
+from ..data.metadata_store import MetadataStore  # Import MetadataStore
 from ..config import settings
+
 
 class DocumentIndexer:
     """
     Orchestrates the document indexing pipeline: parse -> chunk -> metadata -> embed -> store.
     """
-    def __init__(self,
-                 vector_store: VectorStore,
-                 embedding_model: EmbeddingModel,
-                 metadata_store: MetadataStore, # Add MetadataStore parameter
-                 chunk_size: int = settings.EMBEDDING_BATCH_SIZE,
-                 chunk_overlap: int = 50):
+
+    def __init__(
+        self,
+        vector_store: VectorStore,
+        embedding_model: EmbeddingModel,
+        metadata_store: MetadataStore,  # Add MetadataStore parameter
+        chunk_size: int = settings.EMBEDDING_BATCH_SIZE,
+        chunk_overlap: int = 50,
+    ):
         """
         Initializes the DocumentIndexer.
 
@@ -31,7 +35,7 @@ class DocumentIndexer:
         """
         self.vector_store = vector_store
         self.embedding_model = embedding_model
-        self.metadata_store = metadata_store # Store the metadata store instance
+        self.metadata_store = metadata_store  # Store the metadata store instance
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
@@ -59,13 +63,12 @@ class DocumentIndexer:
                 "size": file_stat.st_size,
                 "creation_time": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
                 "modification_time": datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
-                "title": None, # Will try to get from unstructured later
-                "author": None # Will try to get from unstructured later
+                "title": None,  # Will try to get from unstructured later
+                "author": None,  # Will try to get from unstructured later
             }
         except Exception as e:
             print(f"Error extracting file metadata for {file_path}: {e}")
-            doc_metadata = {"file_path": file_path, "filename": os.path.basename(file_path)} # Basic metadata
-
+            doc_metadata = {"file_path": file_path, "filename": os.path.basename(file_path)}  # Basic metadata
 
         # 2. Parse the document
         print("Parsing document...")
@@ -76,11 +79,10 @@ class DocumentIndexer:
 
         # Attempt to get title and author from unstructured metadata if available
         if elements and hasattr(elements[0], 'metadata'):
-             if elements[0].metadata.title:
-                 doc_metadata["title"] = elements[0].metadata.title
-             if elements[0].metadata.author:
-                 doc_metadata["author"] = elements[0].metadata.author
-
+            if elements[0].metadata.title:
+                doc_metadata["title"] = elements[0].metadata.title
+            if elements[0].metadata.author:
+                doc_metadata["author"] = elements[0].metadata.author
 
         # 3. Add/Update document metadata in the store
         print("Adding/Updating document metadata...")
@@ -104,11 +106,11 @@ class DocumentIndexer:
             chunk_data_for_db.append({
                 "document_id": document_id,
                 "chunk_index": i,
-                "content": chunk.get("content", ""), # Include content
+                "content": chunk.get("content", ""),  # Include content
                 "chunk_type": chunk.get("type", "text"),
-                "start_char": None, # Placeholder
-                "end_char": None,   # Placeholder
-                "metadata": chunk.get("metadata", {})
+                "start_char": None,  # Placeholder
+                "end_char": None,  # Placeholder
+                "metadata": chunk.get("metadata", {}),
             })
 
         # 6. Add chunk data to the metadata store
@@ -121,16 +123,15 @@ class DocumentIndexer:
         print("Retrieving chunk IDs from metadata store...")
         stored_chunks = self.metadata_store.get_chunks_by_document_id(document_id)
         if len(stored_chunks) != len(chunks_data):
-             print(f"Warning: Mismatch between created chunks ({len(chunks_data)}) and stored chunks ({len(stored_chunks)}). Aborting embedding.")
-             return
+            print(f"Warning: Mismatch between created chunks ({len(chunks_data)}) and stored chunks ({len(stored_chunks)}). Aborting embedding.")
+            return
 
         # Create mapping from chunk_index to chunk_id and extract texts/ids
         chunk_texts = []
-        external_ids_for_vector_store = [] # These will be the actual chunk IDs from the DB
+        external_ids_for_vector_store = []  # These will be the actual chunk IDs from the DB
         for stored_chunk in stored_chunks:
             chunk_texts.append(stored_chunk["content"])
-            external_ids_for_vector_store.append(stored_chunk["id"]) # Use the DB primary key ID
-
+            external_ids_for_vector_store.append(stored_chunk["id"])  # Use the DB primary key ID
 
         # 8. Generate embeddings for the chunks
         print("Generating embeddings...")
@@ -143,7 +144,6 @@ class DocumentIndexer:
             min_count = min(len(embeddings), len(external_ids_for_vector_store))
             embeddings = embeddings[:min_count]
             external_ids_for_vector_store = external_ids_for_vector_store[:min_count]
-
 
         # 9. Add embeddings to the vector store using chunk IDs as external IDs
         print("Adding embeddings to vector store...")
@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
         # Example search after indexing (using the Retriever)
         print("\n--- Running Retrieval Test ---")
-        from .retriever import Retriever # Import Retriever here
+        from .retriever import Retriever  # Import Retriever here
         retriever = Retriever(embedding_model, vector_store, metadata_store)
         # Build BM25 index (optional for this test, but good practice)
         retriever.build_bm25_index()
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
         print(f"\nSearching the vector store for top 1 similar chunk...")
         # Use the retriever to search
-        search_results = retriever.retrieve(query_text, k=1, search_type="vector") # Use vector search for simplicity
+        search_results = retriever.retrieve(query_text, k=1, search_type="vector")  # Use vector search for simplicity
 
         print("\nSearch Results:")
         if search_results:
@@ -213,7 +213,6 @@ if __name__ == "__main__":
                 print(f"  Metadata: {result['metadata']}")
         else:
             print("No search results.")
-
 
     except ImportError as e:
         print(f"Could not import necessary modules for indexing test: {e}. Skipping test.")
@@ -227,10 +226,10 @@ if __name__ == "__main__":
             import shutil
             shutil.rmtree(test_vector_db_dir)
         if os.path.exists(test_metadata_db_path):
-             os.remove(test_metadata_db_path)
+            os.remove(test_metadata_db_path)
         if os.path.exists(os.path.dirname(test_metadata_db_path)):
-             try:
-                 os.rmdir(os.path.dirname(test_metadata_db_path))
-             except OSError:
-                 pass
+            try:
+                os.rmdir(os.path.dirname(test_metadata_db_path))
+            except OSError:
+                pass
         print(f"\nCleaned up test files and directories.")

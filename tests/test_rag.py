@@ -68,7 +68,8 @@ def retriever():
     vector_store = MockVectorStore()
     metadata_store = MockMetadataStore()
     gemini_client = MockGeminiClient()
-    return Retriever(embedding_model, vector_store, metadata_store, gemini_client)
+    retriever = Retriever(embedding_model, vector_store, metadata_store, gemini_client)
+    return retriever
 
 def test_retrieve_basic(retriever: Retriever):
     query = "test query"
@@ -92,13 +93,29 @@ def test_retrieve_context_window_management(retriever: Retriever):
     context_length = sum(len(r["content"]) for r in results)
     assert context_length > 0 # Basic check that context is being created
 
-def test_retrieve_caching(retriever: Retriever):
+def test_retrieve_caching(retriever: Retriever, capsys):
+    """Tests the retrieval caching mechanism."""
     query = "test query"
-    retriever.build_bm25_index()
-    results_pass1 = retriever.retrieve(query, k=3)
-    results_pass2 = retriever.retrieve(query, k=3) # Should be retrieved from cache
-    assert results_pass1 == results_pass2
-    # Invalidate the cache and check if results are different
+    k = 3
+
+    # 1. First call - should be a cache MISS
+    results_pass1 = retriever.retrieve(query, k=k)
+    captured1 = capsys.readouterr()
+    assert "Retrieving results from cache - MISS" in captured1.out
+
+    # 2. Second call - should be a cache HIT
+    results_pass2 = retriever.retrieve(query, k=k)
+    captured2 = capsys.readouterr()
+    assert "Retrieving results from cache - HIT" in captured2.out
+    assert results_pass1 == results_pass2 # Results should be identical from cache
+
+    # 3. Clear cache
     retriever.clear_cache()
-    results_pass3 = retriever.retrieve(query, k=3)
-    assert results_pass1 != results_pass3
+    captured_clear = capsys.readouterr()
+    assert "Retrieval cache cleared" in captured_clear.out
+
+    # 4. Third call - should be a cache MISS again
+    results_pass3 = retriever.retrieve(query, k=k)
+    captured3 = capsys.readouterr()
+    assert "Retrieving results from cache - MISS" in captured3.out
+    assert results_pass1 == results_pass3 # Results should still be identical if retrieval is deterministic

@@ -1,5 +1,7 @@
 # SOP RAG Update System - Task List
+
 ## Setup Phase
+
 ### Environment Setup
 
 [x] Create project directory structure
@@ -18,12 +20,13 @@
 [x] Create configuration file for system settings
 
 ## Phase 1: Document Processing & Storage
+
 ### Document Processors
 
 [x] Create base document processor class
-[ ] Implement Word document processor (python-docx) - *Note: Core parsing handled by unstructured*
-[ ] Implement PDF document processor (pypdf) - *Note: Core parsing handled by unstructured*
-[ ] Implement PowerPoint processor (python-pptx) - *Note: Core parsing handled by unstructured*
+[x] Implement Word document processor (python-docx) - *Note: Core parsing handled by unstructured*
+[x] Implement PDF document processor (pypdf) - *Note: Core parsing handled by unstructured*
+[x] Implement PowerPoint processor (python-pptx) - *Note: Implemented using python-pptx directly*
 [x] Add metadata extraction for all document types - *Implemented using unstructured*
 [x] Create document chunking strategy
 [ ] Implement structure preservation mechanisms - *Partially handled by unstructured, may need refinement*
@@ -31,7 +34,7 @@
 
 ### Embedding System
 
-[ ] Research and select optimal embedding model for RTX 3060 - *Selected all-MiniLM-L6-v2 based on plan*
+[x] Research and select optimal embedding model for RTX 3060 - *Selected all-MiniLM-L6-v2 based on plan*
 [x] Set up Sentence-Transformers with all-MiniLM-L6-v2
 [x] Create embedding generation pipeline
 [x] Implement batched processing for large documents
@@ -42,13 +45,14 @@
 
 ### Vector Database
 
-[ ] Set up local Chroma DB instance - *Using FAISS as per implementation*
+[x] Set up local FAISS instance - *Using FAISS as per implementation*
 [x] Create schema for document storage - *Handled in Metadata Storage*
 [x] Implement document indexing functionality - *Integrated parsing, chunking, embedding, and storage*
 [x] Create retrieval functions for vectors - *Implemented in Retriever.retrieve method*
 [x] Optimize vector search for performance - *Implemented IndexIVFFlat for faster search*
 [x] Implement persistence layer for vector database - *Implemented save/load for FAISS index*
 [x] Add unit tests for vector database
+[x] Add unit tests for DocumentIndexer
 
 ### Metadata Storage
 
@@ -60,6 +64,7 @@
 [x] Add unit tests for metadata storage
 
 ## Phase 2: RAG & Conversation System
+
 ### Retrieval System
 
 [x] Implement hybrid search (BM25 + vector) - *Implemented in Retriever.retrieve using RRF*
@@ -71,33 +76,34 @@
 
 ### Gemini Integration
 
-[ ] Set up Google Generative AI client
-[ ] Create Gemini API wrapper
-[ ] Implement streaming response handling
-[ ] Create rate limiting and error handling
-[ ] Optimize prompt formatting for Gemini
-[ ] Add unit tests for Gemini integration
+[x] Set up Google Generative AI client
+[x] Create Gemini API wrapper
+[x] Implement streaming response handling
+[x] Create rate limiting and error handling
+[x] Optimize prompt formatting for Gemini
+[x] Add unit tests for Gemini integration
 
 ### Conversation Management
 
-[ ] Design conversation data model
-[ ] Create conversation history storage
-[ ] Implement context management system
-[ ] Add conversation memory mechanism
-[ ] Create conversation state management
-[ ] Add unit tests for conversation management
+[x] Design conversation data model
+[x] Create conversation history storage
+[x] Implement context management system
+[x] Add conversation memory mechanism - *Handled via context history and state management*
+[x] Create conversation state management
+[x] Add unit tests for conversation management
 
 ### Prompt Engineering
 
-[ ] Create base prompt templates
-[ ] Design system prompt for document understanding
-[ ] Implement templates for document updating
-[ ] Create templates for policy analysis
-[ ] Add templates for consistency checking
-[ ] Implement prompt optimization techniques
-[ ] Add unit tests for prompt system
+[x] Create base prompt templates
+[x] Design system prompt for document understanding
+[x] Implement templates for document updating
+[x] Implement templates for policy analysis
+[x] Implement templates for consistency checking
+[x] Implement prompt optimization techniques
+[x] Add unit tests for prompt system
 
 ## Phase 3: Document Editing
+
 ### Word Document Manipulation
 
 [ ] Research python-docx capabilities for preserving formatting
@@ -107,6 +113,13 @@
 [ ] Add style preservation mechanisms
 [ ] Implement table and list handling
 [ ] Add unit tests for document manipulation
+
+### Change Tracking System
+
+[ ] Investigate alternative or supplementary libraries for enhanced formatting preservation.
+[ ] Implement functions for comparing documents and identifying changes.
+[ ] Implement functions for applying changes while preserving formatting.
+[ ] Add unit tests to validate formatting preservation.
 
 ### Change Tracking System
 
@@ -136,6 +149,7 @@
 [ ] Add unit tests for template preservation
 
 ## Phase 4: User Interface
+
 ### Streamlit App Base
 
 [ ] Set up Streamlit application structure
@@ -185,6 +199,7 @@
 [ ] Add theme and appearance settings
 
 ## Integration Phase
+
 ### Component Integration
 
 [ ] Connect document processors to embedding system
@@ -205,6 +220,7 @@
 [ ] Performance testing with large document sets
 
 ## Optimization Phase
+
 ### Performance Optimization
 
 [ ] Profile application for bottlenecks
@@ -234,6 +250,7 @@
 [ ] Create usage monitoring dashboard
 
 ## Documentation & Finalization
+
 ### Documentation
 
 [ ] Create comprehensive README

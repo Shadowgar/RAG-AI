@@ -16,7 +16,7 @@ class DocxProcessor(DocumentProcessor):
         """
         return os.path.splitext(file_path)[1].lower() == ".docx"
 
-    def process(self, file_path: str) -> List[Dict[str, Any]]:
+    def process(self, file_path: str, replacements: Dict[str, str] = None) -> List[Dict[str, Any]]:
         """
         Processes a .docx file and extracts content and metadata.
         Extracts paragraphs and tables as separate chunks.
@@ -25,53 +25,54 @@ class DocxProcessor(DocumentProcessor):
             raise ValueError("File type not supported by DocxProcessor")
 
         try:
-            document = Document(file_path)
+            from docxtpl import DocxTemplate
+            document = DocxTemplate(file_path)
+            context = replacements if replacements else {}  # Use the replacements dictionary
+
+            # Apply replacements
+            document.render(context)
+
+            # Manually update formatting after rendering
+            for paragraph in document.paragraphs:
+                for run in paragraph.runs:
+                    if run.text.strip() in context.values():
+                        for key, value in context.items():
+                            if run.text.strip() == value:
+                                if key == "bold":
+                                    run.bold = True
+                                elif key == "italic":
+                                    run.italic = True
+
+            # Extract chunks from the modified document
             chunks: List[Dict[str, Any]] = []
+            for paragraph in document.paragraphs:
+                for run in paragraph.runs:
+                    metadata = {
+                        "bold": run.bold,
+                        "italic": run.italic,
+                        "font_name": run.font.name,
+                        "font_size": run.font.size.pt if run.font.size else None,
+                        "source": file_path
+                    }
 
-            # Extract paragraphs
-            for i, paragraph in enumerate(document.paragraphs):
-                if paragraph.text.strip(): # Only process non-empty paragraphs
+                    # Debug print for run content and metadata
+                    print(f"Run content: {run.text}, Metadata: {metadata}")
+
+                    # Check if the run contains the replaced text
+                    if run.text.strip() in context.values():
+                        # Update metadata based on the context
+                        for key, value in context.items():
+                            if run.text.strip() == value:
+                                if key == "bold":
+                                    metadata["bold"] = True
+                                elif key == "italic":
+                                    metadata["italic"] = True
+
                     chunks.append({
-                        "content": paragraph.text,
+                        "content": run.text,
                         "type": "paragraph",
-                        "metadata": {
-                            "source": file_path,
-                            "paragraph_index": i,
-                            "style": paragraph.style.name if paragraph.style else None,
-                            # Add other relevant paragraph properties if needed
-                        }
+                        "metadata": metadata
                     })
-
-            # Extract tables (basic representation)
-            for i, table in enumerate(document.tables):
-                table_data = []
-                for row in table.rows:
-                    row_data = [cell.text for cell in row.cells]
-                    table_data.append(row_data)
-
-                # Represent table as a string for now, could be more structured
-                table_string = "\n".join(["\t".join(row) for row in table_data])
-
-                if table_string.strip(): # Only process non-empty tables
-                     chunks.append({
-                        "content": table_string,
-                        "type": "table",
-                        "metadata": {
-                            "source": file_path,
-                            "table_index": i,
-                            # Add other relevant table properties if needed
-                        }
-                    })
-
-            # Add document-level metadata (basic)
-            doc_metadata = {
-                "source": file_path,
-                "title": document.core_properties.title,
-                "author": document.core_properties.author,
-                # Add other core properties as needed
-            }
-            # Optionally add document metadata as a separate chunk or to all chunks
-            # For now, we'll just return the content chunks with source metadata
 
             return chunks
 

@@ -29,33 +29,59 @@ class GeminiClient:
             print(f"Error configuring Gemini client: {e}")
             raise
 
-    def generate_response(self, prompt: str) -> str:
+    def generate_response(self, prompt: str, stream: bool = False):
         """
         Generates a text response from the Gemini model based on the prompt.
+        Supports streaming responses.
 
         Args:
             prompt: The input prompt string.
+            stream: If True, stream the response chunks. If False, return the full response text.
 
         Returns:
-            The generated text response string, or an error message if generation fails.
+            If stream is True, a generator yielding text chunks.
+            If stream is False, the full generated text response string, or an error message.
         """
         if not prompt:
-            return "Error: Prompt cannot be empty."
+            if stream:
+                def empty_generator():
+                    yield "Error: Prompt cannot be empty."
+                return empty_generator()
+            else:
+                return "Error: Prompt cannot be empty."
 
         try:
-            response = self.model.generate_content(prompt)
-            # Access the text part of the response
-            # Handle potential issues if the response doesn't contain text
-            if response.parts:
-                 return response.text
+            response = self.model.generate_content(prompt, stream=stream)
+
+            if stream:
+                def streaming_generator():
+                    try:
+                        for chunk in response:
+                            if chunk.parts:
+                                yield chunk.text
+                            # Add more granular error/block handling for streaming chunks if needed
+                    except Exception as e:
+                        print(f"Error during streaming response from Gemini: {e}")
+                        yield f"\nError during streaming: {e}"
+                return streaming_generator()
             else:
-                 # Handle cases where the response might be blocked or empty
-                 print(f"Warning: Gemini response did not contain text parts. Response: {response}")
-                 return f"Error: Gemini response blocked or empty. Finish reason: {response.prompt_feedback.block_reason if response.prompt_feedback else 'N/A'}"
+                # Non-streaming response handling
+                if response.parts:
+                    return response.text
+                else:
+                    # Handle cases where the response might be blocked or empty
+                    print(f"Warning: Gemini non-streaming response did not contain text parts. Response: {response}")
+                    block_reason = response.prompt_feedback.block_reason if response.prompt_feedback else 'N/A'
+                    return f"Error: Gemini response blocked or empty. Finish reason: {block_reason}"
 
         except Exception as e:
             print(f"Error generating response from Gemini: {e}")
-            return f"Error: Failed to generate response from Gemini. {e}"
+            if stream:
+                def error_generator():
+                    yield f"Error: Failed to generate response from Gemini. {e}"
+                return error_generator()
+            else:
+                return f"Error: Failed to generate response from Gemini. {e}"
 
 # Example Usage
 if __name__ == "__main__":
@@ -64,15 +90,30 @@ if __name__ == "__main__":
     # or provide it directly: GeminiClient(api_key="YOUR_API_KEY")
     try:
         client = GeminiClient()
-        print("\nAttempting to generate a simple response...")
-        test_prompt = "Explain the concept of Retrieval-Augmented Generation (RAG) in one sentence."
-        response = client.generate_response(test_prompt)
-        print(f"\nPrompt: {test_prompt}")
-        print(f"Response: {response}")
+        print("\nAttempting to generate a simple non-streaming response...")
+        test_prompt_non_stream = "Explain the concept of Retrieval-Augmented Generation (RAG) in one sentence."
+        response_non_stream = client.generate_response(test_prompt_non_stream, stream=False)
+        print(f"\nPrompt (Non-streaming): {test_prompt_non_stream}")
+        print(f"Response (Non-streaming): {response_non_stream}")
 
-        print("\nAttempting to generate response for an empty prompt...")
-        empty_response = client.generate_response("")
-        print(f"Response for empty prompt: {empty_response}")
+        print("\nAttempting to generate a simple streaming response...")
+        test_prompt_stream = "Tell me a short story about a brave knight."
+        print(f"\nPrompt (Streaming): {test_prompt_stream}")
+        print("Response (Streaming):")
+        for chunk in client.generate_response(test_prompt_stream, stream=True):
+            print(chunk, end="", flush=True)
+        print("\n") # Add a newline at the end
+
+        print("\nAttempting to generate response for an empty prompt (non-streaming)...")
+        empty_response_non_stream = client.generate_response("", stream=False)
+        print(f"Response for empty prompt (non-streaming): {empty_response_non_stream}")
+
+        print("\nAttempting to generate response for an empty prompt (streaming)...")
+        print("Response for empty prompt (streaming):")
+        for chunk in client.generate_response("", stream=True):
+             print(chunk, end="", flush=True)
+        print("\n") # Add a newline at the end
+
 
     except ValueError as ve:
         print(f"\nInitialization Error: {ve}")

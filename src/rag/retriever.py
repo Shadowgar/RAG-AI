@@ -7,17 +7,20 @@ from collections import defaultdict
 from .embeddings import EmbeddingModel
 from .vector_store import VectorStore
 from ..data.metadata_store import MetadataStore
-from ..llm.gemini import GeminiClient # Import GeminiClient
-from ..llm.prompts import PromptTemplates # Import PromptTemplates
-from ..config import settings # Assuming config is in src/
+from ..llm.gemini import GeminiClient  # Import GeminiClient
+from ..llm.prompts import PromptTemplates  # Import PromptTemplates
+from ..config import settings  # Assuming config is in src/
+
 
 # Simple tokenizer for BM25
 def simple_tokenizer(text: str) -> List[str]:
     return text.lower().split()
 
+
 def estimate_token_count(text: str) -> int:
     """Estimates the token count of a given text using a simple word-based approximation."""
     return len(simple_tokenizer(text))
+
 
 class Retriever:
     """
@@ -26,11 +29,14 @@ class Retriever:
     Uses the EmbeddingModel for query embedding, VectorStore for similarity search,
     MetadataStore to retrieve full chunk data, and GeminiClient for response generation.
     """
-    def __init__(self,
-                 embedding_model: EmbeddingModel,
-                 vector_store: VectorStore,
-                 metadata_store: MetadataStore,
-                 gemini_client: GeminiClient): # Add GeminiClient
+
+    def __init__(
+        self,
+        embedding_model: EmbeddingModel,
+        vector_store: VectorStore,
+        metadata_store: MetadataStore,
+        gemini_client: GeminiClient,
+    ):  # Add GeminiClient
         """
         Initializes the Retriever.
 
@@ -45,8 +51,8 @@ class Retriever:
         self.metadata_store = metadata_store
         self.gemini_client = gemini_client
         self.bm25: Optional[BM25Okapi] = None
-        self.chunk_id_corpus_map: Optional[Dict[int, str]] = None # Map chunk_id to content for BM25 retrieval
-        self.retrieval_cache: Dict[str, List[Dict[str, Any]]] = {} # Cache retrieval results
+        self.chunk_id_corpus_map: Optional[Dict[int, str]] = None  # Map chunk_id to content for BM25 retrieval
+        self.retrieval_cache: Dict[str, List[Dict[str, Any]]] = {}  # Cache retrieval results
 
     def build_bm25_index(self):
         """
@@ -62,184 +68,13 @@ class Retriever:
         # For now, let's assume a hypothetical `get_all_chunks` method exists
         # Replace this with actual implementation if MetadataStore is updated
         try:
-            # Hypothetical: Get all document IDs
-            # conn = self.metadata_store._get_connection()
-            # cursor = conn.cursor()
-            # cursor.execute("SELECT id FROM documents")
-            # doc_ids = [row[0] for row in cursor.fetchall()]
-            # conn.close()
-            # for doc_id in doc_ids:
-            #     all_chunks.extend(self.metadata_store.get_chunks_by_document_id(doc_id))
             # A more direct way if possible:
-            #conn = self.metadata_store._get_connection()
-            #cursor = conn.cursor()
-            #cursor.execute("SELECT id, content FROM chunks") # Select only id and content
-            #all_chunks_raw = cursor.fetchall()
-            #conn.close()
-            #all_chunks = [{"id": row[0], "content": row[1]} for row in all_chunks_raw]
-            all_chunks = []
-            # Assuming we need to iterate through all documents first
-            # This part needs refinement based on how MetadataStore can efficiently retrieve all chunks
-            # For now, let's assume a hypothetical `get_all_chunks` method exists
-            # Replace this with actual implementation if MetadataStore is updated
-            try:
-                # Hypothetical: Get all document IDs
-                conn = self.metadata_store._get_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT id FROM documents")
-                doc_ids = [row[0] for row in cursor.fetchall()]
-                conn.close()
-                for doc_id in doc_ids:
-                    all_chunks.extend(self.metadata_store.get_chunks_by_document_id(doc_id))
-            except:
-                print("Failed to get chunks by document id")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            all_chunks = []
-            # Assuming we need to iterate through all documents first
-            # This part needs refinement based on how MetadataStore can efficiently retrieve all chunks
-            # For now, let's assume a hypothetical `get_all_chunks` method exists
-            # Replace this with actual implementation if MetadataStore is updated
-            try:
-                # Hypothetical: Get all document IDs
-                conn = self.metadata_store._get_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT id FROM documents")
-                doc_ids = [row[0] for row in cursor.fetchall()]
-                conn.close()
-                for doc_id in doc_ids:
-                    all_chunks.extend(self.metadata_store.get_chunks_by_document_id(doc_id))
-            except:
-                print("Failed to get chunks by document id")
-
+            conn = self.metadata_store._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, content FROM chunks")  # Select only id and content
+            all_chunks_raw = cursor.fetchall()
+            conn.close()
+            all_chunks = [{"id": row[0], "content": row[1]} for row in all_chunks_raw]
 
         except Exception as e:
             print(f"Error fetching all chunks for BM25 index: {e}")
@@ -256,8 +91,14 @@ class Retriever:
         self.bm25 = BM25Okapi(tokenized_corpus)
         print(f"BM25 index built with {len(corpus_texts)} chunks.")
 
-
-    def retrieve(self, query: str, k: int = 5, search_type: str = "hybrid", rrf_k: int = 60, metadata_filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def retrieve(
+        self,
+        query: str,
+        k: int = 5,
+        search_type: str = "hybrid",
+        rrf_k: int = 60,
+        metadata_filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
         """
         Retrieves the top-k most relevant document chunks for a given query and generates a response.
         Caches retrieval results to improve performance.
@@ -278,18 +119,23 @@ class Retriever:
             return []
 
         # Create a cache key
-        cache_key = json.dumps({
-            "query": query,
-            "k": k,
-            "search_type": search_type,
-            "rrf_k": rrf_k,
-            "metadata_filters": metadata_filters
-        }, sort_keys=True)
+        cache_key = json.dumps(
+            {
+                "query": query,
+                "k": k,
+                "search_type": search_type,
+                "rrf_k": rrf_k,
+                "metadata_filters": metadata_filters,
+            },
+            sort_keys=True,
+        )
 
         # Check if the result is already cached
         if cache_key in self.retrieval_cache:
-            print("Retrieving results from cache...")
+            print("Retrieving results from cache - HIT")
             return self.retrieval_cache[cache_key]
+        else:
+            print("Retrieving results from cache - MISS")
 
         vector_results = []
         bm25_results = []
@@ -314,16 +160,15 @@ class Retriever:
                         filtered_vector_search_raw.append(res)
 
             # Assuming external_id is chunk_id (needs update in indexer)
-            vector_results = [(int(res['external_id']), 1.0 / (i + 1), res['distance']) for i, res in enumerate(filtered_vector_search_raw)] # (chunk_id, rank_score, distance)
+            vector_results = [(int(res['external_id']), 1.0 / (i + 1), res['distance']) for i, res in enumerate(filtered_vector_search_raw)]  # (chunk_id, rank_score, distance)
             final_results_ids.update([res[0] for res in vector_results])
             print(f"Vector search found {len(vector_results)} results.")
-
 
         # 2. BM25 Search (if applicable)
         if search_type in ["bm25", "hybrid"]:
             if self.bm25 is None or self.chunk_id_corpus_map is None:
                 print("Warning: BM25 index not built. Building now...")
-                self.build_bm25_index() # Attempt to build if not already built
+                self.build_bm25_index()  # Attempt to build if not already built
 
             if self.bm25 and self.chunk_id_corpus_map:
                 print(f"Performing BM25 search for query: '{query}'")
@@ -344,18 +189,16 @@ class Retriever:
                         if self._matches_filters(metadata, metadata_filters):
                             filtered_chunk_id_scores[chunk_id] = score
 
-
                 # Sort by score descending
                 sorted_bm25 = sorted(filtered_chunk_id_scores.items(), key=lambda item: item[1], reverse=True)
 
                 # Retrieve more results initially for potential re-ranking
                 initial_k_bm25 = k * 2 if search_type == "hybrid" else k
-                bm25_results = [(chunk_id, 1.0 / (i + 1), score) for i, (chunk_id, score) in enumerate(sorted_bm25[:initial_k_bm25])] # (chunk_id, rank_score, bm25_score)
+                bm25_results = [(chunk_id, 1.0 / (i + 1), score) for i, (chunk_id, score) in enumerate(sorted_bm25[:initial_k_bm25])]  # (chunk_id, rank_score, bm25_score)
                 final_results_ids.update([res[0] for res in bm25_results])
                 print(f"BM25 search found {len(bm25_results)} results.")
             else:
-                 print("BM25 index not available, skipping BM25 search.")
-
+                print("BM25 index not available, skipping BM25 search.")
 
         # 3. Combine and Re-rank (if hybrid)
         combined_results = []
@@ -364,11 +207,11 @@ class Retriever:
             rrf_scores = defaultdict(float)
             # Process vector results
             for rank, (chunk_id, rank_score, distance) in enumerate(vector_results):
-                rrf_scores[chunk_id] += 1.0 / (rrf_k + rank + 1) # RRF formula
+                rrf_scores[chunk_id] += 1.0 / (rrf_k + rank + 1)  # RRF formula
 
             # Process BM25 results
             for rank, (chunk_id, rank_score, bm25_score) in enumerate(bm25_results):
-                 rrf_scores[chunk_id] += 1.0 / (rrf_k + rank + 1) # RRF formula
+                rrf_scores[chunk_id] += 1.0 / (rrf_k + rank + 1)  # RRF formula
 
             # ----------------------------------------------------------------------------------------------------
             # Add chunk length to the RRF score
@@ -409,34 +252,32 @@ class Retriever:
                     normalized_index = max(0, min(1, 1.0 / (chunk_index + 1)))  # Invert the index
                     rrf_scores[chunk_id] += 0.05 * normalized_index  # Adjust the weight (0.05) as needed
 
-
             # Sort combined results by RRF score
             sorted_combined_ids = sorted(rrf_scores.keys(), key=lambda cid: rrf_scores[cid], reverse=True)
-            final_results_ids = sorted_combined_ids[:k] # Get top k combined results
+            final_results_ids = sorted_combined_ids[:k]  # Get top k combined results
 
         elif search_type == "vector":
-            final_results_ids = [res[0] for res in sorted(vector_results, key=lambda x: x[2])[:k]] # Sort by distance
+            final_results_ids = [res[0] for res in sorted(vector_results, key=lambda x: x[2])[:k]]  # Sort by distance
         elif search_type == "bm25":
-             final_results_ids = [res[0] for res in sorted(bm25_results, key=lambda x: x[2], reverse=True)[:k]] # Sort by score
-
+            final_results_ids = [res[0] for res in sorted(bm25_results, key=lambda x: x[2], reverse=True)[:k]]  # Sort by score
 
         # 4. Retrieve full chunk data for final results
         retrieved_chunks_data: List[Dict[str, Any]] = []
         print(f"Retrieving final {len(final_results_ids)} chunks from metadata store...")
         for chunk_id in final_results_ids:
-            chunk_data = self.metadata_store.get_chunk_by_id(chunk_id) # Use get_chunk_by_id
+            chunk_data = self.metadata_store.get_chunk_by_id(chunk_id)  # Use get_chunk_by_id
             if chunk_data:
                 # Optionally add the final score (RRF, distance, or BM25)
                 if search_type == "hybrid":
                     chunk_data["score"] = rrf_scores.get(chunk_id)
                 elif search_type == "vector":
-                     # Find the original vector result for this chunk_id
-                     vec_res = next((vr for vr in vector_results if vr[0] == chunk_id), None)
-                     chunk_data["distance"] = vec_res[2] if vec_res else None
+                    # Find the original vector result for this chunk_id
+                    vec_res = next((vr for vr in vector_results if vr[0] == chunk_id), None)
+                    chunk_data["distance"] = vec_res[2] if vec_res else None
                 elif search_type == "bm25":
-                     # Find the original bm25 result for this chunk_id
-                     bm25_res = next((br for br in bm25_results if br[0] == chunk_id), None)
-                     chunk_data["score"] = bm25_res[2] if bm25_res else None
+                    # Find the original bm25 result for this chunk_id
+                    bm25_res = next((br for br in bm25_results if br[0] == chunk_id), None)
+                    chunk_data["score"] = bm25_res[2] if bm25_res else None
 
                 retrieved_chunks_data.append(chunk_data)
             else:
@@ -469,11 +310,11 @@ class Retriever:
                 # Truncate the chunk if it exceeds the remaining token limit
                 remaining_tokens = max_context_tokens - current_token_count
                 if remaining_tokens > 0:
-                    truncated_chunk = chunk_content[:remaining_tokens*4] # Assuming 1 token is roughly 4 characters
+                    truncated_chunk = chunk_content[: remaining_tokens * 4]  # Assuming 1 token is roughly 4 characters
                     context += truncated_chunk + "\n"
                     selected_chunks.append(chunk)
-                    current_token_count = max_context_tokens # Set to max
-                break # Stop adding chunks
+                    current_token_count = max_context_tokens  # Set to max
+                break  # Stop adding chunks
 
         print(f"Selected {len(selected_chunks)} chunks for context. Estimated token count: {current_token_count}")
 
@@ -488,7 +329,7 @@ class Retriever:
         # Add the response to the result
         results = []
         for chunk in selected_chunks:
-            results.append({**chunk, "response": response_text}) # Merge chunk data with response
+            results.append({**chunk, "response": response_text})  # Merge chunk data with response
 
         print(f"Retrieved {len(results)} final chunks and generated response.")
         
@@ -527,8 +368,8 @@ if __name__ == "__main__":
     print("      to store metadata chunk IDs as external_ids in the VectorStore.")
     print("      Running this example without that update might lead to errors.")
 
-    test_vector_db_dir = "data/vector_db_test_retrieval" # Use a separate dir for this test
-    test_metadata_db_path = "data/metadata_test_retrieval/metadata.db" # Use a separate db
+    test_vector_db_dir = "data/vector_db_test_retrieval"  # Use a separate dir for this test
+    test_metadata_db_path = "data/metadata_test_retrieval/metadata.db"  # Use a separate db
 
     # Ensure dummy files and directories exist
     dummy_docx_path = "data/documents/dummy_retrieval.docx"
@@ -557,20 +398,20 @@ if __name__ == "__main__":
         embedding_model = EmbeddingModel()
         vector_store = VectorStore(index_path=test_vector_db_dir)
         metadata_store = MetadataStore(db_path=test_metadata_db_path)
-        gemini_client = GeminiClient() # Initialize GeminiClient
+        gemini_client = GeminiClient()  # Initialize GeminiClient
 
         # Index the document (assuming indexer is updated to store chunk_id)
         print("\nRunning indexing...")
-        from .indexing import DocumentIndexer # Re-import for clarity
+        from .indexing import DocumentIndexer  # Re-import for clarity
         # THIS WILL FAIL if indexer is not updated to store chunk_id
         document_indexer = DocumentIndexer(vector_store, embedding_model, metadata_store, chunk_size=50, chunk_overlap=10)
         if os.path.exists(dummy_docx_path):
             document_indexer.index_document(dummy_docx_path)
-        vector_store.save() # Save after indexing
+        vector_store.save()  # Save after indexing
 
         # Initialize Retriever and build BM25 index
         retriever = Retriever(embedding_model, vector_store, metadata_store, gemini_client)
-        retriever.build_bm25_index() # Build the index
+        retriever.build_bm25_index()  # Build the index
 
         # Perform retrievals
         query = "keyword algorithms"
@@ -582,7 +423,7 @@ if __name__ == "__main__":
             for i, chunk in enumerate(hybrid_chunks):
                 print(f"--- Chunk {i+1} (Score: {chunk.get('score', 0):.4f}) ---")
                 print(f"Content: {chunk.get('content', '')}")
-                print(f"Response: {chunk.get('response', 'No response generated')}") # Print the response
+                print(f"Response: {chunk.get('response', 'No response generated')}")  # Print the response
         else:
             print("No chunks retrieved.")
 
@@ -590,23 +431,23 @@ if __name__ == "__main__":
         vector_chunks = retriever.retrieve(query, k=2, search_type="vector")
         print("\nVector Retrieved Chunks:")
         if vector_chunks:
-             for i, chunk in enumerate(vector_chunks):
-                 print(f"--- Chunk {i+1} (Distance: {chunk.get('distance', float('inf')):.4f}) ---")
-                 print(f"Content: {chunk.get('content', '')}")
-                 print(f"Response: {chunk.get('response', 'No response generated')}") # Print the response
+            for i, chunk in enumerate(vector_chunks):
+                print(f"--- Chunk {i+1} (Distance: {chunk.get('distance', float('inf')):.4f}) ---")
+                print(f"Content: {chunk.get('content', '')}")
+                print(f"Response: {chunk.get('response', 'No response generated')}")  # Print the response
         else:
-             print("No chunks retrieved.")
+            print("No chunks retrieved.")
 
         print(f"\nPerforming BM25 retrieval for query: '{query}'")
         bm25_chunks = retriever.retrieve(query, k=2, search_type="bm25")
         print("\nBM25 Retrieved Chunks:")
         if bm25_chunks:
-             for i, chunk in enumerate(bm25_chunks):
-                 print(f"--- Chunk {i+1} (Score: {chunk.get('score', 0):.4f}) ---")
-                 print(f"Content: {chunk.get('content', '')}")
-                 print(f"Response: {chunk.get('response', 'No response generated')}") # Print the response
+            for i, chunk in enumerate(bm25_chunks):
+                print(f"--- Chunk {i+1} (Score: {chunk.get('score', 0):.4f}) ---")
+                print(f"Content: {chunk.get('content', '')}")
+                print(f"Response: {chunk.get('response', 'No response generated')}")  # Print the response
         else:
-             print("No chunks retrieved.")
+            print("No chunks retrieved.")
 
         # Example of filtering by metadata
         print(f"\nPerforming HYBRID retrieval with metadata filtering (topic='SOP')...")
@@ -618,7 +459,7 @@ if __name__ == "__main__":
                 print(f"--- Chunk {i+1} (Score: {chunk.get('score', 0):.4f}) ---")
                 print(f"Content: {chunk.get('content', '')}")
                 print(f"Metadata: {json.dumps(chunk.get('metadata', {}))}")
-                print(f"Response: {chunk.get('response', 'No response generated')}") # Print the response
+                print(f"Response: {chunk.get('response', 'No response generated')}")  # Print the response
         else:
             print("No chunks retrieved.")
 
@@ -626,7 +467,6 @@ if __name__ == "__main__":
         print("\nClearing the retrieval cache...")
         retriever.clear_cache()
         print("Retrieval cache cleared.")
-
 
     except ImportError as e:
         print(f"Could not import necessary modules for retrieval test: {e}. Skipping test.")
@@ -640,10 +480,10 @@ if __name__ == "__main__":
             import shutil
             shutil.rmtree(test_vector_db_dir)
         if os.path.exists(test_metadata_db_path):
-             os.remove(test_metadata_db_path)
+            os.remove(test_metadata_db_path)
         if os.path.exists(os.path.dirname(test_metadata_db_path)):
-             try:
-                 os.rmdir(os.path.dirname(test_metadata_db_path))
-             except OSError:
-                 pass
+            try:
+                os.rmdir(os.path.dirname(test_metadata_db_path))
+            except OSError:
+                pass
         print(f"\nCleaned up test files and directories.")

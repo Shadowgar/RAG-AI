@@ -88,3 +88,7 @@ if __name__ == "__main__":
         print("Could not import document_parser. Skipping chunking test.")
     except Exception as e:
         print(f"Error during chunking test: {e}")
+
+def chunk_text_by_tokens(text: str, chunk_size: int = 512, chunk_overlap: int = 50) -> List[str]:
+    """Placeholder for chunking text by tokens."""
+    return [text]

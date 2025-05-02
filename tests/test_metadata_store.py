@@ -131,9 +131,9 @@ def test_metadata_store_add_chunk_metadata():
     assert doc_id is not None
 
     chunks_meta = [
-        {"chunk_index": 0, "chunk_type": "paragraph", "metadata": {"page": 1, "text_snippet": "chunk 1 content"}},
-        {"chunk_index": 1, "chunk_type": "table", "metadata": {"page": 1, "table_rows": 2}},
-        {"chunk_index": 2, "chunk_type": "paragraph", "metadata": {"page": 2, "text_snippet": "chunk 3 content"}},
+        {"chunk_index": 0, "chunk_type": "paragraph", "content": "chunk 1 content", "metadata": {"page": 1, "text_snippet": "chunk 1 content"}},
+        {"chunk_index": 1, "chunk_type": "table", "content": "chunk 2 content", "metadata": {"page": 1, "table_rows": 2}},
+        {"chunk_index": 2, "chunk_type": "paragraph", "content": "chunk 3 content", "metadata": {"page": 2, "text_snippet": "chunk 3 content"}},
     ]
     store.add_chunk_metadata(doc_id, chunks_meta)
 
@@ -190,9 +190,9 @@ def test_metadata_store_get_chunks_by_document_id():
     assert doc_id is not None
 
     chunks_meta = [
-        {"chunk_index": 0, "chunk_type": "paragraph", "metadata": {"page": 1}},
-        {"chunk_index": 1, "chunk_type": "paragraph", "metadata": {"page": 1}},
-        {"chunk_index": 2, "chunk_type": "paragraph", "metadata": {"page": 2}},
+        {"chunk_index": 0, "chunk_type": "paragraph", "content": "chunk 1 content", "metadata": {"page": 1}},
+        {"chunk_index": 1, "chunk_type": "paragraph", "content": "chunk 2 content", "metadata": {"page": 1}},
+        {"chunk_index": 2, "chunk_type": "paragraph", "content": "chunk 3 content", "metadata": {"page": 2}},
     ]
     store.add_chunk_metadata(doc_id, chunks_meta)
 

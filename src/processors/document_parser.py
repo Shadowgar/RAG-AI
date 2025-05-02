@@ -26,10 +26,12 @@ def parse_document(file_path: str) -> List[Dict[str, Any]]:
         parsed_data: List[Dict[str, Any]] = []
         for element in elements:
             # Elements have attributes like .text, .type, .metadata
+            metadata = element.metadata.to_dict() if hasattr(element, 'metadata') and element.metadata else {}
+            metadata["source"] = file_path # Ensure source is always added
             parsed_data.append({
                 "content": str(element), # Use str(element) to get the text content
                 "type": element.category if hasattr(element, 'category') else 'unknown', # Use category for type
-                "metadata": element.metadata.to_dict() if hasattr(element, 'metadata') and element.metadata else {}
+                "metadata": metadata
             })
         return parsed_data
 

@@ -31,22 +31,18 @@ class PdfProcessor(DocumentProcessor):
 
         chunks: List[Dict[str, Any]] = []
         try:
-            document = fitz.open(file_path)
-            for page_num in range(document.page_count):
-                page = document.load_page(page_num)
-                text = page.get_text()
+            from unstructured.partition.auto import partition
+            elements = partition(filename=file_path)
 
-                if text.strip(): # Only process non-empty pages
-                    chunks.append({
-                        "content": text,
-                        "type": "page",
-                        "metadata": {
-                            "source": file_path,
-                            "page_number": page_num + 1, # 1-based index
-                            "total_pages": document.page_count,
-                        }
-                    })
-            document.close()
+            for element in elements:
+                metadata = element.metadata.to_dict() if hasattr(element, 'metadata') and element.metadata else {}
+                metadata["source"] = file_path
+                chunks.append({
+                    "content": str(element),
+                    "type": element.category if hasattr(element, 'category') else 'unknown',
+                    "metadata": metadata
+                })
+
             return chunks
 
         except Exception as e:
