@@ -110,21 +110,21 @@
 [x] Create document comparison utility - *Implemented in `src/utils/doc_comparison.py` with console output; compares text and basic formatting (bold, italic, font name/size). Unit tests cover identical docs, text changes, format changes, structural changes, and file errors.*
 [~] Implement section-based editing functions - *Basic `replace_text_after_heading` implemented in `WordEditor`*
 [~] Create paragraph manipulation utilities - *Added insert, delete, update, get_text in `WordEditor`*
-[ ] Add style preservation mechanisms
-[ ] Implement table and list handling
+[~] Add style preservation mechanisms - *Copy functions and `update_paragraph_text` provide basic support, with known limitations (e.g., bold with list styles).*
+[~] Implement table and list handling - *Basic table operations (get/update cell, add row) and placeholder list utils in `WordEditor`.*
 [ ] Add unit tests for document manipulation
 
 ### Change Tracking System
 
-[ ] Investigate alternative or supplementary libraries for enhanced formatting preservation.
-[ ] Implement functions for comparing documents and identifying changes.
+[x] Investigate alternative or supplementary libraries for enhanced formatting preservation. - *Research indicates `python-docx` with careful granular control is the primary open-source Python approach. No simple drop-in enhancement libraries found for complex edit formatting preservation.*
+[x] Implement functions for comparing documents and identifying changes. - *Covered by `src/utils/doc_comparison.py` (see task 110).*
 [ ] Implement functions for applying changes while preserving formatting.
 [ ] Add unit tests to validate formatting preservation.
 
 ### Change Tracking System
 
-[ ] Design change data model
-[ ] Implement change detection algorithm
+[x] Design change data model - *Implemented `DocumentChange` model in `src/editing/change_model.py` with Pydantic.*
+[~] Implement change detection algorithm - *Initial `ChangeDetector` class and `detect_paragraph_text_changes` (basic indexed-based) implemented in `src/editing/change_detector.py`.*
 [ ] Create change metadata storage
 [ ] Add change visualization utilities
 [ ] Implement change reversion mechanism

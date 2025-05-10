@@ -178,32 +178,58 @@ class WordEditor:
         (Placeholder for implementation)
         """
         # Reason: Placeholder for future implementation.
-        if 0 <= table_index < len(self.document.tables):
-            table = self.document.tables[table_index]
-            if 0 <= row < len(table.rows) and 0 <= col < len(table.columns):
-                try:
-                    return table.cell(row, col).text
-                except IndexError:
-                    print(f"Warning: Cell ({row}, {col}) out of bounds for table {table_index}.")
-                    return ""
-        return ""
+        if not (0 <= table_index < len(self.document.tables)):
+            print(f"Warning: Table index {table_index} out of bounds.")
+            return ""
+        
+        table = self.document.tables[table_index]
+        
+        if not (0 <= row < len(table.rows)):
+            print(f"Warning: Row index {row} out of bounds for table {table_index} with {len(table.rows)} rows.")
+            return ""
+        
+        # A row might not have all columns physically present if they are empty,
+        # but table.columns gives the defined number of columns.
+        # table.cell(row, col) can create cells if they don't exist up to table.columns.
+        if not (0 <= col < len(table.columns)):
+            print(f"Warning: Column index {col} out of bounds for table {table_index} with {len(table.columns)} columns.")
+            return ""
+            
+        try:
+            return table.cell(row, col).text
+        except IndexError:
+            # This might happen for jagged tables or other rare conditions not caught by above checks.
+            print(f"Warning: Cell ({row}, {col}) caused IndexError for table {table_index}.")
+            return ""
 
     def update_table_cell_text(self, table_index: int, row: int, col: int, text: str) -> bool:
         """
         Updates the text in a specific cell in a table.
-        (Placeholder for implementation)
+        Ensures cell exists before updating.
         """
-        # Reason: Placeholder for future implementation.
-        if 0 <= table_index < len(self.document.tables):
-            table = self.document.tables[table_index]
-            if 0 <= row < len(table.rows) and 0 <= col < len(table.columns):
-                try:
-                    table.cell(row, col).text = text
-                    return True
-                except IndexError:
-                    print(f"Warning: Cell ({row}, {col}) out of bounds for table {table_index} during update.")
-                    return False
-        return False
+        if not (0 <= table_index < len(self.document.tables)):
+            print(f"Warning: Table index {table_index} out of bounds for update.")
+            return False
+            
+        table = self.document.tables[table_index]
+
+        if not (0 <= row < len(table.rows)):
+            print(f"Warning: Row index {row} out of bounds for table {table_index} with {len(table.rows)} rows during update.")
+            return False
+
+        if not (0 <= col < len(table.columns)):
+            print(f"Warning: Column index {col} out of bounds for table {table_index} with {len(table.columns)} columns during update.")
+            return False
+            
+        try:
+            # Accessing cell can create it if it doesn't exist but is within table dimensions
+            cell_to_update = table.cell(row, col)
+            cell_to_update.text = text
+            return True
+        except IndexError:
+            # Should ideally be caught by above checks, but as a safeguard.
+            print(f"Warning: Cell ({row}, {col}) caused IndexError for table {table_index} during update.")
+            return False
 
     def add_row_to_table(self, table_index: int):
         """
@@ -267,29 +293,98 @@ class WordEditor:
         paragraph = self.document.paragraphs[paragraph_index]
 
         if preserve_style:
-            original_runs = list(paragraph.runs) # Make a copy
+            original_runs = list(paragraph.runs) # Make a copy of run objects
             
-            # Clear existing runs
-            for run in paragraph.runs:
-                p = run._element.getparent()
-                p.remove(run._element)
-            
-            # Add new text with copied style from the first original run (if any)
-            new_run = paragraph.add_run(new_text)
+            # Extract formatting from the first original run BEFORE clearing
+            # This is crucial because run properties might become unreliable after element removal
+            run_style_to_apply = None
+            font_to_apply = {}
+            direct_formatting_to_apply = {}
+
             if original_runs:
-                # Attempt to copy style from the first run of the original paragraph
-                # This is a simplification. For more complex scenarios, iterate all original runs
-                # or handle paragraph style directly.
-                self.copy_run_formatting(original_runs[0], new_run)
-                # Also try to preserve paragraph-level style if it was set
-                if original_runs[0].style:
-                     new_run.style = original_runs[0].style
-            # If paragraph itself had a style, ensure it's maintained or reapplied
-            if paragraph.style:
-                # Re-applying paragraph style might be needed if clearing runs affected it
-                # However, add_run usually inherits paragraph style.
-                # If issues arise, explicitly set paragraph.style = paragraph.style here.
+                first_original_run = original_runs[0]
+                direct_formatting_to_apply['bold'] = first_original_run.bold
+                direct_formatting_to_apply['italic'] = first_original_run.italic
+                direct_formatting_to_apply['underline'] = first_original_run.underline
+                
+                font_to_apply['name'] = first_original_run.font.name
+                font_to_apply['size'] = first_original_run.font.size
+                font_to_apply['color_rgb'] = first_original_run.font.color.rgb if first_original_run.font.color else None
+                font_to_apply['highlight_color'] = first_original_run.font.highlight_color
+                font_to_apply['strike'] = first_original_run.font.strike
+                font_to_apply['subscript'] = first_original_run.font.subscript
+                font_to_apply['superscript'] = first_original_run.font.superscript
+                font_to_apply['all_caps'] = first_original_run.font.all_caps
+                font_to_apply['small_caps'] = first_original_run.font.small_caps
+
+                if first_original_run.style and first_original_run.style.name:
+                    run_style_to_apply = first_original_run.style.name
+            else: # No original runs, nothing to copy
                 pass
+
+
+            # Clear existing runs from the live paragraph object
+            # Iterate backwards to avoid issues with list modification during iteration
+            # This ensures that the paragraph object is clean before adding the new run.
+            for r in reversed(list(paragraph.runs)): # Iterate over a copy
+                p_elem = r._element.getparent()
+                p_elem.remove(r._element)
+            # At this point, paragraph.runs should be effectively empty from an XML perspective.
+            
+            # Add the new text, which creates a new single run
+            new_run = paragraph.add_run(new_text)
+
+            # Apply the extracted formatting only if there was something to apply
+            if original_runs: # Check if we actually extracted anything
+                
+                # Apply font attributes first
+                if font_to_apply.get('name'): new_run.font.name = font_to_apply['name']
+                if font_to_apply.get('size'): new_run.font.size = font_to_apply['size']
+                if font_to_apply.get('color_rgb'): new_run.font.color.rgb = font_to_apply['color_rgb']
+                if font_to_apply.get('highlight_color') is not None: new_run.font.highlight_color = font_to_apply['highlight_color']
+                if font_to_apply.get('strike') is not None: new_run.font.strike = font_to_apply['strike']
+                if font_to_apply.get('subscript') is not None: new_run.font.subscript = font_to_apply['subscript']
+                if font_to_apply.get('superscript') is not None: new_run.font.superscript = font_to_apply['superscript']
+                if font_to_apply.get('all_caps') is not None: new_run.font.all_caps = font_to_apply['all_caps']
+                if font_to_apply.get('small_caps') is not None: new_run.font.small_caps = font_to_apply['small_caps']
+
+                # Then, apply character style (if any)
+                if run_style_to_apply:
+                    try:
+                        new_run.style = run_style_to_apply
+                    except KeyError:
+                        print(f"Warning: Character style '{run_style_to_apply}' not found in document. Skipping style copy for new run.")
+
+                # Finally, apply direct formatting attributes like bold/italic, to ensure they override styles
+                # print(f"DEBUG: Applying direct formatting. Bold from source: {direct_formatting_to_apply.get('bold')}")
+                
+                bold_val = direct_formatting_to_apply.get('bold')
+                # TODO: Investigate why new_run.bold = True does not always result in new_run.bold being True
+                # when the paragraph has certain styles (e.g., 'ListNumber').
+                # It works for default styled paragraphs. This suggests an interaction
+                # with how python-docx handles overriding paragraph style with direct run formatting
+                # in this specific update sequence (clearing runs, adding new, applying cached format).
+                if bold_val is True:
+                    new_run.bold = True
+                elif bold_val is False:
+                    new_run.bold = False
+                # If bold_val is None, new_run inherits, so no explicit assignment needed for None.
+                    
+                italic_val = direct_formatting_to_apply.get('italic')
+                if italic_val is True:
+                    new_run.italic = True
+                elif italic_val is False:
+                    new_run.italic = False
+
+                underline_val = direct_formatting_to_apply.get('underline')
+                if underline_val is True:
+                    new_run.underline = True
+                elif underline_val is False:
+                    new_run.underline = False
+                # Note: python-docx run.underline can also take WD_UNDERLINE enum values
+                # For simplicity, sticking to True/False/None for now from direct copy.
+            
+            # Paragraph's own style is generally preserved unless explicitly changed.
 
         else:
             # Replace text without preserving style (will use default or paragraph's current style)
