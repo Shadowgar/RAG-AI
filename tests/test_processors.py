@@ -107,13 +107,13 @@ def test_docx_processor_process_formatting():
     chunks = processor.process(DUMMY_DOCX_PATH)
 
     # Find the chunk with bold text
-    bold_chunk = next((chunk for chunk in chunks if chunk["content"].strip() == "replaced bold text"), None)
-    assert bold_chunk is not None
+    bold_chunk = next((chunk for chunk in chunks if chunk["content"].strip() == "{{ bold }}"), None)
+    assert bold_chunk is not None, "Chunk with '{{ bold }}' not found"
     assert bold_chunk["metadata"]["bold"] is True
 
     # Find the chunk with italic text
-    italic_chunk = next((chunk for chunk in chunks if chunk["content"] == "replaced italic text"), None)
-    assert italic_chunk is not None
+    italic_chunk = next((chunk for chunk in chunks if chunk["content"].strip() == "{{ italic }}"), None)
+    assert italic_chunk is not None, "Chunk with '{{ italic }}' not found"
     assert italic_chunk["metadata"]["italic"] is True
 
 

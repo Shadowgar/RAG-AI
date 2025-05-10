@@ -164,7 +164,7 @@ python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 
 # Install core dependencies
-pip install sentence-transformers faiss-cpu pymupdf python-docx python-pptx 
+pip install sentence-transformers faiss-cpu pymupdf python-docx python-pptx
 pip install streamlit chromadb llama-index google-generativeai pydantic
 
 # Create project structure
@@ -229,3 +229,65 @@ Test RAG capabilities with a small document set
 Implement conversation system and basic UI
 Add document editing capabilities
 Complete the UI and perform system testing
+
+## Research Notes
+
+### `python-docx` Formatting Preservation (2025-05-10)
+
+**Objective:** Understand `python-docx` capabilities for preserving text formatting (bold, italic, font, styles, etc.) when reading, editing, and writing Word (.docx) documents. This is crucial for the "Document Editing Layer" of the SOP RAG Update System.
+
+**Core Concepts:**
+*   **Document Hierarchy:** `python-docx` models Word documents with a hierarchy:
+    *   `Document`: The top-level object representing the entire file.
+    *   `Paragraph`: A block of text, typically ending with a newline.
+    *   `Run`: A contiguous sequence of characters within a paragraph that shares the same character-level formatting. A single paragraph can contain multiple runs (e.g., "This is **bold** and *italic*." would involve at least three runs).
+*   **Formatting Application:**
+    *   **Run-Level Formatting:** Most direct character formatting (bold, italic, underline, font name, font size, font color) is applied to `Run` objects. Examples: `run.bold = True`, `run.italic = True`, `run.font.name = 'Calibri'`, `run.font.size = Pt(12)`.
+    *   **Paragraph-Level Formatting:** Alignment, indentation, spacing, and paragraph styles are applied to `Paragraph` objects. Example: `paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER`.
+    *   **Styles:** Word documents use styles (e.g., "Normal", "Heading 1", "List Paragraph") to define sets of formatting attributes. `python-docx` can read and apply both paragraph styles (`paragraph.style`) and character styles (`run.style`). Explicit run formatting overrides character styles, which in turn override paragraph styles.
+
+**Capabilities & Limitations for Preservation:**
+
+1.  **Reading Formatting:**
+    *   `python-docx` can reliably read most common formatting attributes from runs (e.g., `run.bold`, `run.italic`, `run.font.name`, `run.font.size`, `run.font.color.rgb`) and paragraphs (e.g., `paragraph.alignment`, `paragraph.style`).
+    *   It can identify the names of applied styles.
+
+2.  **Applying Formatting:**
+    *   New or existing runs and paragraphs can have their formatting attributes set explicitly.
+    *   Predefined or custom document styles can be applied.
+
+3.  **Preserving Formatting During Edits:**
+    *   **Simple Text Replacement within a Single Run:** If you modify `run.text` directly (e.g., `run.text = new_text`), the existing formatting of that *specific run* is generally preserved. This is the most straightforward scenario.
+    *   **Replacing Text Spanning Multiple Runs or Paragraphs:** This is significantly more complex. `python-docx` does not have a high-level "find and replace with formatting" function that spans across run boundaries intelligently.
+        *   If you delete an old run and add a new one, all formatting from the old run must be explicitly copied to the new run.
+        *   If a replacement operation needs to split an existing run or merge parts of different runs, new `Run` objects must be created, and their formatting must be meticulously managed by copying attributes from the original run(s).
+    *   **Inserting New Content:** When inserting new paragraphs or runs, their formatting must be set explicitly or by applying a style. They do not automatically inherit all nuanced formatting from surrounding content unless explicitly coded.
+    *   **Copying/Moving Content:** There isn't a direct "copy_paragraph_with_formatting" or "move_run_with_formatting" method. To achieve this, one must:
+        1.  Iterate through the source paragraph(s)/run(s).
+        2.  Create new paragraph(s)/run(s) at the target location.
+        3.  For each new element, copy all relevant text and formatting attributes (bold, italic, font properties, style name, paragraph properties, etc.) from the corresponding source element. This can be verbose.
+
+4.  **Working with Complex Elements:**
+    *   **Tables:** Tables, rows, and cells are distinct objects. Text within cells is managed via paragraphs and runs, following the same formatting principles. Table-level formatting (borders, shading) can also be manipulated.
+    *   **Lists:** List formatting (bullets, numbering) is primarily controlled by paragraph styles.
+    *   **Headers/Footers:** Accessible and editable, containing paragraphs and runs.
+    *   **Images/Shapes:** Basic image insertion is supported. Complex manipulation or preservation of existing embedded objects can be limited.
+
+5.  **Unsupported Features:**
+    *   `python-docx` does not support every feature available in Microsoft Word. Advanced layout features, some complex drawing objects (SmartArt, Charts beyond basic image representation), macros, and certain XML-level constructs might not be fully understood or preserved.
+    *   Editing a document with `python-docx` and re-saving it can sometimes lead to the loss or alteration of features the library doesn't handle.
+
+**Strategies for Maximizing Formatting Preservation:**
+
+*   **Granular Operations:** Perform changes at the most granular level possible (i.e., within runs if feasible).
+*   **Read-Modify-Write Attributes:** When changing a run, read its existing formatting, make text changes, then ensure the formatting attributes are still correctly set or reapply them.
+*   **Style-Based Formatting:** Rely on applying predefined document styles as much as possible, as this is generally more robust than direct run-level formatting for consistency.
+*   **Careful Iteration:** For complex replacements or insertions, iterate carefully through paragraphs and runs. Be prepared to split runs or create new ones, ensuring formatting is copied.
+*   **Consider `docxtpl` for Generation, `python-docx` for Fine-grained Edits:** `docxtpl` is excellent for generating documents from templates with initial formatting. For subsequent, precise edits while preserving existing, potentially arbitrary formatting, `python-docx`'s direct manipulation of the document structure is necessary.
+*   **Testing:** Thoroughly test editing operations on diverse documents to identify formatting loss scenarios.
+
+**Implications for the SOP Project:**
+*   Simple text corrections suggested by the LLM, if they fall within a single run, should be relatively easy to apply while preserving formatting.
+*   Suggestions involving adding/deleting entire sentences or paragraphs, or rephrasing text that spans multiple formatting types, will require careful implementation to clone/reapply formatting from the original or surrounding text.
+*   The system should aim to preserve common formatting attributes like bold, italic, underline, font properties, basic paragraph alignment, and list structures. Perfect preservation of highly complex or obscure Word formatting might be out of scope for initial versions due to the complexity involved.
+*   A "document comparison" utility will be essential to highlight what `python-docx` *thinks* it has changed versus the original, helping to identify unintended formatting loss.

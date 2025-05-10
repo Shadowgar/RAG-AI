@@ -106,10 +106,10 @@
 
 ### Word Document Manipulation
 
-[ ] Research python-docx capabilities for preserving formatting
-[ ] Create document comparison utility
-[ ] Implement section-based editing functions
-[ ] Create paragraph manipulation utilities
+[x] Research python-docx capabilities for preserving formatting - *Summary: `python-docx` can read/write most common run-level formatting (bold, italic, font, styles). Preservation during complex edits (multi-run, paragraph changes) requires explicit copying/reapplication of formatting attributes. Direct text replacement within a single run usually preserves its style. Tables, lists, etc., have their own objects. Not all advanced Word features are supported.*
+[x] Create document comparison utility - *Implemented in `src/utils/doc_comparison.py` with console output; compares text and basic formatting (bold, italic, font name/size). Unit tests cover identical docs, text changes, format changes, structural changes, and file errors.*
+[~] Implement section-based editing functions - *Basic `replace_text_after_heading` implemented in `WordEditor`*
+[~] Create paragraph manipulation utilities - *Added insert, delete, update, get_text in `WordEditor`*
 [ ] Add style preservation mechanisms
 [ ] Implement table and list handling
 [ ] Add unit tests for document manipulation
@@ -280,6 +280,9 @@
 [ ] Review code quality and documentation
 [ ] Perform final performance optimization
 [ ] Create release package
+
+## Discovered During Work
+[x] 2025-05-10: Fix `DocxProcessor` to correctly handle formatting (bold/italic) and template variables (`{{ placeholder }}`) when processing .docx files, ensuring all tests in `test_processors.py` pass.
 
 ## Implementation Notes
 
