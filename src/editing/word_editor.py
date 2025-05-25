@@ -3,12 +3,18 @@ from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+from typing import List, Optional
+from docx.text.run import Run
+from docx.text.paragraph import Paragraph
+from docx.table import Table, _Cell
+from ..editing.change_model import DocumentChange, ChangeType, LocationParagraph, LocationTable, LocationSection
+
 class WordEditor:
     """
     Provides utilities for editing Word documents (.docx) while attempting to preserve formatting.
     """
 
-    def __init__(self, doc_path: str = None):
+    def __init__(self, doc_path: Optional[str] = None):
         """
         Initializes the WordEditor.
 
@@ -31,7 +37,7 @@ class WordEditor:
         self.document.save(save_path)
 
     # Placeholder for section-based editing functions
-    def replace_text_after_heading(self, heading_text: str, new_content_paragraphs: list[str], heading_style_name: str = None):
+    def replace_text_after_heading(self, heading_text: str, new_content_paragraphs: list[str], heading_style_name: Optional[str] = None):
         """
         Replaces all paragraphs following a specific heading until the next heading
         of the same or higher level, or the end of the document.
@@ -45,85 +51,70 @@ class WordEditor:
         Returns:
             bool: True if the heading was found and content replaced, False otherwise.
         """
-        # Reason: Placeholder for future implementation.
         start_index = -1
-        heading_level = -1 # For style-based heading level comparison
+        heading_level = -1
 
         for i, para in enumerate(self.document.paragraphs):
             is_heading_match = False
             if heading_style_name:
-                if para.style and para.style.name.startswith(heading_style_name) and heading_text in para.text:
+                if para.style and para.style.name and para.style.name.startswith(heading_style_name) and heading_text in para.text:
                     is_heading_match = True
                     try:
-                        # Attempt to get heading level from style name, e.g., "Heading 1" -> 1
-                        level_str = para.style.name.split(" ")[-1]
-                        if level_str.isdigit():
-                            heading_level = int(level_str)
-                    except: # pylint: disable=bare-except
-                        # If style name is not like "Heading X", use a default or handle error
-                        pass # Keep heading_level as -1 or some other indicator
-            elif heading_text == para.text.strip(): # Exact match if no style given
+                        if para.style.name: # Additional check for safety
+                            level_str = para.style.name.split(" ")[-1]
+                            if level_str.isdigit():
+                                heading_level = int(level_str)
+                    except:
+                        pass
+            elif heading_text == para.text.strip():
                 is_heading_match = True
 
             if is_heading_match:
                 start_index = i
                 break
-        
+
         if start_index == -1:
             print(f"Heading '{heading_text}' not found.")
             return False
 
-        # Find end of the section (next heading of same/higher level or end of doc)
         end_index = len(self.document.paragraphs)
         for i in range(start_index + 1, len(self.document.paragraphs)):
             para = self.document.paragraphs[i]
             if para.style and para.style.name and para.style.name.startswith("Heading"):
                 current_level = -1
                 try:
-                    level_str = para.style.name.split(" ")[-1]
-                    if level_str.isdigit():
-                        current_level = int(level_str)
-                except: # pylint: disable=bare-except
+                    if para.style.name: # Additional check for safety
+                        level_str = para.style.name.split(" ")[-1]
+                        if level_str.isdigit():
+                            current_level = int(level_str)
+                except:
                     pass
-                
+
                 if heading_style_name and heading_level != -1 and current_level != -1:
-                    if current_level <= heading_level: # Same or higher level heading
+                    if current_level <= heading_level:
                         end_index = i
                         break
-                elif para.style.name.startswith("Heading"): # Any heading if original was text-matched
+                elif para.style and para.style.name and para.style.name.startswith("Heading"):
                     end_index = i
                     break
-        
-        # Remove old paragraphs in the section
-        # Iterate backwards to avoid index shifting issues when removing
+
         for i in range(end_index - 1, start_index, -1):
             p_to_delete = self.document.paragraphs[i]._element
             p_to_delete.getparent().remove(p_to_delete)
 
-        # Insert new content paragraphs
         if new_content_paragraphs:
-            # After deletion, the paragraph at (start_index + 1) is effectively
-            # the paragraph that followed the deleted section, or it's the end of doc.
             if start_index + 1 < len(self.document.paragraphs):
-                # If there's a paragraph after the heading (which is now at start_index),
-                # insert the new content before that paragraph.
                 anchor_for_insertion = self.document.paragraphs[start_index + 1]
-                # Iterate in forward order. Each new paragraph is inserted before the anchor,
-                # effectively pushing the anchor down and placing subsequent paragraphs correctly.
                 for new_para_text in new_content_paragraphs:
                     new_p = anchor_for_insertion.insert_paragraph_before(new_para_text)
-                    # Optionally, apply a default style or copy from somewhere
-                    # For now, they get the default paragraph style.
             else:
-                # The deleted section was at the very end of the document.
-                # So, add new paragraphs to the end.
-                for new_para_text in new_content_paragraphs: # Add in given order
+                for new_para_text in new_content_paragraphs:
                     new_p = self.document.add_paragraph(new_para_text)
-                    # Optionally, apply a default style.
-        
+
         return True
 
-    def insert_paragraph_after(self, paragraph_index: int, text: str, style: str = None):
+
+    def insert_paragraph_after(self, paragraph_index: int, text: str, style: Optional[str] = None):
         """
         Inserts a new paragraph with the given text and optional style
         after the paragraph at the specified index.
@@ -392,6 +383,71 @@ class WordEditor:
             # Ensure paragraph.text clears previous runs and their specific formatting.
             # python-docx handles this by replacing the content of the paragraph.
 
+    def _update_run_text(self, paragraph: Paragraph, run_index: int, new_text: str):
+        """
+        Updates the text of a specific run within a paragraph while preserving its formatting.
+
+        Args:
+            paragraph (Paragraph): The paragraph containing the run.
+            run_index (int): The index of the run to update.
+            new_text (str): The new text for the run.
+        """
+        if not (0 <= run_index < len(paragraph.runs)):
+            print(f"Warning: Run index {run_index} is out of bounds for paragraph.")
+            return
+
+        run = paragraph.runs[run_index]
+        original_formatting = {
+            'bold': run.bold,
+            'italic': run.italic,
+            'underline': run.underline,
+            'font_name': run.font.name,
+            'font_size': run.font.size,
+            'color_rgb': run.font.color.rgb if run.font.color else None,
+            'highlight_color': run.font.highlight_color,
+            'strike': run.font.strike,
+            'subscript': run.font.subscript,
+            'superscript': run.font.superscript,
+            'all_caps': run.font.all_caps,
+            'small_caps': run.font.small_caps,
+            'style_name': run.style.name if run.style else None
+        }
+
+        # Clear the existing run's content
+        run.text = ""
+
+        # Add the new text to the run
+        run.add_text(new_text)
+
+        # Reapply the original formatting
+        run.bold = original_formatting['bold']
+        run.italic = original_formatting['italic']
+        run.underline = original_formatting['underline']
+        run.font.name = original_formatting['font_name']
+        if original_formatting['font_size'] is not None:
+            run.font.size = original_formatting['font_size']
+        if original_formatting['color_rgb'] is not None:
+            run.font.color.rgb = original_formatting['color_rgb']
+        if original_formatting['highlight_color'] is not None:
+             run.font.highlight_color = original_formatting['highlight_color']
+        if original_formatting['strike'] is not None:
+            run.font.strike = original_formatting['strike']
+        if original_formatting['subscript'] is not None:
+            run.font.subscript = original_formatting['subscript']
+        if original_formatting['superscript'] is not None:
+            run.font.superscript = original_formatting['superscript']
+        if original_formatting['all_caps'] is not None:
+            run.font.all_caps = original_formatting['all_caps']
+        if original_formatting['small_caps'] is not None:
+            run.font.small_caps = original_formatting['small_caps']
+
+        if original_formatting['style_name']:
+            try:
+                run.style = original_formatting['style_name']
+            except KeyError:
+                print(f"Warning: Character style '{original_formatting['style_name']}' not found in document. Skipping style copy for run.")
+
+
     # Placeholder for style preservation mechanisms
     def copy_run_formatting(self, source_run, target_run):
         """
@@ -476,6 +532,119 @@ class WordEditor:
         # target_pf.tab_stops.clear_all()
         # for tab_stop in source_pf.tab_stops:
         #     target_pf.add_tab_stop(tab_stop.position, tab_stop.alignment, tab_stop.leader)
+
+    def apply_changes(self, changes: List[DocumentChange]):
+        """
+        Applies a list of DocumentChange objects to the document.
+
+        Args:
+            changes (List[DocumentChange]): A list of changes to apply.
+
+        Note: Applying changes that affect document structure (insertions, deletions)
+        can affect the indices of subsequent changes. For simplicity, this
+        implementation applies changes in the order provided. A more robust
+        approach might require re-indexing or applying changes in reverse order
+        for deletions.
+        """
+        for change in changes:
+            try:
+                if change.change_type == ChangeType.TEXT_UPDATE:
+                    if isinstance(change.location, LocationParagraph):
+                        para_index = change.location.paragraph_index
+                        if 0 <= para_index < len(self.document.paragraphs):
+                            paragraph = self.document.paragraphs[para_index]
+                            if change.location.run_index is not None:
+                                self._update_run_text(paragraph, change.location.run_index, str(change.new_value))
+                            else:
+                                # Apply to the whole paragraph, attempting to preserve style
+                                self.update_paragraph_text(para_index, str(change.new_value), preserve_style=True)
+                        else:
+                            print(f"Warning: TEXT_UPDATE failed. Paragraph index {para_index} out of bounds.")
+                    else:
+                        print(f"Warning: TEXT_UPDATE requires LocationParagraph, but got {type(change.location).__name__}.")
+
+                elif change.change_type == ChangeType.PARAGRAPH_INSERT:
+                    if isinstance(change.location, LocationParagraph) and change.new_value is not None:
+                         # Assuming location.paragraph_index is the index *before* which to insert
+                        insert_before_index = change.location.paragraph_index
+                        if 0 <= insert_before_index <= len(self.document.paragraphs):
+                            # If inserting at the end, insert_paragraph_before on a non-existent index won't work.
+                            # Need to handle appending specifically.
+                            if insert_before_index == len(self.document.paragraphs):
+                                self.document.add_paragraph(str(change.new_value))
+                            else:
+                                anchor_paragraph = self.document.paragraphs[insert_before_index]
+                                anchor_paragraph.insert_paragraph_before(str(change.new_value))
+                        else:
+                             print(f"Warning: PARAGRAPH_INSERT failed. Insertion index {insert_before_index} out of bounds.")
+                    else:
+                        print(f"Warning: PARAGRAPH_INSERT requires LocationParagraph and new_value.")
+
+                elif change.change_type == ChangeType.PARAGRAPH_DELETE:
+                    if isinstance(change.location, LocationParagraph):
+                        para_index = change.location.paragraph_index
+                        self.delete_paragraph(para_index) # delete_paragraph handles index checks
+                    else:
+                        print(f"Warning: PARAGRAPH_DELETE requires LocationParagraph.")
+
+                elif change.change_type == ChangeType.SECTION_REPLACE:
+                    if isinstance(change.location, LocationSection) and isinstance(change.new_value, list):
+                        self.replace_text_after_heading(
+                            heading_text=change.location.heading_text,
+                            new_content_paragraphs=change.new_value,
+                            heading_style_name=change.location.heading_style_name
+                        ) # replace_text_after_heading handles not finding the heading
+                    else:
+                        print(f"Warning: SECTION_REPLACE requires LocationSection and new_value as a list of strings.")
+
+                elif change.change_type == ChangeType.TABLE_CELL_UPDATE:
+                    if isinstance(change.location, LocationTable) and change.new_value is not None:
+                        self.update_table_cell_text(
+                            table_index=change.location.table_index,
+                            row=change.location.row_index,
+                            col=change.location.column_index,
+                            text=str(change.new_value)
+                        ) # update_table_cell_text handles index checks
+                    else:
+                        print(f"Warning: TABLE_CELL_UPDATE requires LocationTable and new_value.")
+
+                # Add handling for other ChangeTypes as they are implemented
+
+                else:
+                    print(f"Warning: Unsupported change type: {change.change_type}")
+
+                # Optionally update change status to APPLIED here if successful
+                # change.status = ChangeStatus.APPLIED # This would require the changes list to be mutable or returning a new list
+
+            except Exception as e:
+                print(f"Error applying change {change.change_id}: {e}")
+                # Optionally update change status to FAILED here
+                # change.status = ChangeStatus.FAILED
+
+
+
+
+    def get_content_between_headings(self, start_heading: str, end_heading: str) -> str:
+        """
+        Retrieves the content between two specified headings.
+
+        Args:
+            start_heading (str): The text of the starting heading.
+            end_heading (str): The text of the ending heading.
+
+        Returns:
+            str: The content between the headings, or an empty string if the headings are not found.
+        """
+        content = ""
+        start_found = False
+        for para in self.document.paragraphs:
+            if para.text == start_heading:
+                start_found = True
+            elif start_found and para.text == end_heading:
+                break
+            elif start_found:
+                content += para.text + "\n"
+        return content
 
 if __name__ == '__main__':
     # Example Usage (for testing purposes)
